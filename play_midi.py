@@ -65,9 +65,15 @@ class Window:
 
             if self.paused == False:
                 play_chord(self.progression.chord_list[loc][0],self.progression.chord_list[loc][1])
+
+
+                
+
+
                 print(self.progression.chord2str(self.progression.chord_list[loc]))
                 print(important_notes(self.progression.chord_list[loc]))
-                pygame.display.flip()
+
+            pygame.display.flip()
 
 class ChordProgression:
     """
@@ -105,7 +111,6 @@ class ChordProgression:
             play_chord(i[0],i[1], beats=def_beats,bpm=def_bpm)
             print(self.chord2str(i))
             print(important_notes(i))
-
 
 
 def play_note(note, beats=1, bpm=60, amp=1):
