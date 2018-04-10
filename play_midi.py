@@ -2,8 +2,10 @@
 
 import atexit
 import os
+import pygame
+import time
 from random import choice
-
+from pygame.locals import *
 from psonic import *
 
 # The sample directory is relative to this source file's directory.
@@ -18,6 +20,54 @@ SAMPLE_CHORD = C3
 chords = {}
 
 ImportantNotesDict = {"major":(0,4,7), "minor":(0,3,7), "major7":(0,4,7,11), "minor7":(0,3,7,10)}
+
+class Window:
+    """
+    This is the window that contains the visual components and input for the app.
+    """
+    def __init__(self):
+        self.running = True
+        self.display_surf = None
+        self.image_surf = None
+        self.window_width = 1200
+        self.window_height = 900
+        self.progression = ChordProgression(("C","major7"),("F","minor"),("G","major"),("D","minor7"))
+
+    def go(self):
+        """
+        This is the main method that gets called to start the whole thing.
+        """
+        pygame.init() #Gets pygame going
+        # display_surf and image_surf are also from a pygame tutorial
+        self.display_surf = pygame.display.set_mode((self.window_width,self.window_height), pygame.HWSURFACE)
+        self.running = True
+        self.paused = False
+
+        loc = 0
+
+        while self.running:
+            pygame.event.pump()
+
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    self.running = False
+                    pygame.quit()
+            pygame.key.set_repeat(10000,1000)
+            keys = pygame.key.get_pressed()
+
+            if (keys[K_ESCAPE]):
+                self.running = False
+                pygame.quit()
+
+            if (keys[K_SPACE]):
+                self.paused = not self.paused
+                print("Paused = {}".format(self.paused))
+
+            if self.paused == False:
+                play_chord(self.progression.chord_list[loc][0],self.progression.chord_list[loc][1])
+                print(self.progression.chord2str(self.progression.chord_list[loc]))
+                print(important_notes(self.progression.chord_list[loc]))
+                pygame.display.flip()
 
 class ChordProgression:
     """
@@ -48,10 +98,11 @@ class ChordProgression:
         return "{} {}".format(chord[0], chord[1])
 
 
-    def play(self):
+    def play(self, def_beats=4, def_bpm=120):
         """Plays the chords in the chord progression for 4 beats each"""
+
         for i in self.chord_list:
-            play_chord(i[0],i[1])
+            play_chord(i[0],i[1], beats=def_beats,bpm=def_bpm)
             print(self.chord2str(i))
             print(important_notes(i))
 
@@ -147,6 +198,8 @@ make_chord_dict()
 
 # print(note2steps('Eb'))
 
-practiceChordProgression = ChordProgression(("C","major7"),("F","minor"),("G","major"),("D","minor7"))
+window = Window()
+# practiceChordProgression = ChordProgression(("C","major7"),("F","minor"),("G","major"),("D","minor7"))
 # print(practiceChordProgression)
-practiceChordProgression.play()
+# practiceChordProgression.play()
+window.go()
