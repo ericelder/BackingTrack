@@ -66,18 +66,15 @@ class Window:
             if self.paused == False:
                 play_chord(self.progression.chord_list[loc][0],self.progression.chord_list[loc][1])
                 message1 = self.progression.chord2str(self.progression.chord_list[loc])
-                font = pygame.font.Font(None, 24)
+                font = pygame.font.Font(None, 100)
                 text1 = font.render(message1, 1, (10,10,10))
-
 
                 message2 = important_notes(self.progression.chord_list[loc])
                 text2 = font.render(message2, 1, (10,10,10))
 
-                board.fill ((250,250,250), (0,900,900,25))
-                board.blit(text1, (10,900))
-                board.blit(text2, (20,900))
-
-
+                self.display_surf.fill ((250,250,250))
+                self.display_surf.blit(text1, (self.window_width/2-text1.get_height()/2,self.window_height/3-text1.get_width()/2))
+                self.display_surf.blit(text2, (self.window_width/2-text2.get_height()/2,self.window_height*2/3-text2.get_width()/2))
 
                 print(self.progression.chord2str(self.progression.chord_list[loc]))
                 print(important_notes(self.progression.chord_list[loc]))
