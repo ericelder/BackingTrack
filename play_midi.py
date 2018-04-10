@@ -29,7 +29,7 @@ class Window:
         self.running = True
         self.display_surf = None
         self.image_surf = None
-        self.window_width = 1200
+        self.window_width = 900
         self.window_height = 900
         self.progression = ChordProgression(("C","major7"),("F","minor"),("G","major"),("D","minor7"))
 
@@ -65,9 +65,18 @@ class Window:
 
             if self.paused == False:
                 play_chord(self.progression.chord_list[loc][0],self.progression.chord_list[loc][1])
+                message1 = self.progression.chord2str(self.progression.chord_list[loc])
+                font = pygame.font.Font(None, 24)
+                text1 = font.render(message1, 1, (10,10,10))
 
 
-                
+                message2 = important_notes(self.progression.chord_list[loc])
+                text2 = font.render(message2, 1, (10,10,10))
+
+                board.fill ((250,250,250), (0,900,900,25))
+                board.blit(text1, (10,900))
+                board.blit(text2, (20,900))
+
 
 
                 print(self.progression.chord2str(self.progression.chord_list[loc]))
