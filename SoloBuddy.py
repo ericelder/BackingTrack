@@ -42,7 +42,7 @@ class Window:
         self.display_surf = pygame.display.set_mode((self.window_width,self.window_height), pygame.HWSURFACE)
         self.running = True
         self.paused = False
-
+        # loc is permanantly set to zero, so it only plays one chord but is easier to test pause functionality.
         loc = 0
 
         while self.running:
@@ -62,7 +62,7 @@ class Window:
             if (keys[K_SPACE]):
                 self.paused = not self.paused
                 print("Paused = {}".format(self.paused))
-
+                # "Paused" reverts to false immediately, so the music does not stop.
             if self.paused == False:
                 play_chord(self.progression.chord_list[loc][0],self.progression.chord_list[loc][1])
                 message1 = self.progression.chord2str(self.progression.chord_list[loc])
@@ -137,7 +137,6 @@ def play_chord(root, tonality, beats=4, bpm=120, amp=1):
     sample(os.path.realpath(chords[tonality]), rate=rate, amp=amp)
     sleep(beats * 120 / bpm)
 
-
 def stop():
     """Stop all tracks."""
     msg = osc_message_builder.OscMessageBuilder(address='/stop-all-jobs')
@@ -184,6 +183,9 @@ def step2notes(notes):
     return pitches
 
 def get_important_notes(chord):
+    """
+    This finds the notes that will sound good over a certain chord.
+    """
     root = note2steps(chord[0])
     imp_intervals = important_notes[chord[1]]
     imp_steps = []
