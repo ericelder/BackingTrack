@@ -42,10 +42,19 @@ class Window:
         self.display_surf = pygame.display.set_mode((self.window_width,self.window_height), pygame.HWSURFACE)
         self.running = True
         self.paused = False
-        # loc is permanantly set to zero, so it only plays one chord but is easier to test pause functionality.
-        loc = 0
+        i = 0
+        bpm = 120
+        last_time = time.time()
+
+        space_pressed = False
+        r_pressed = False
+        f_pressed = False
+        s_pressed = False
 
         while self.running:
+            if i >= self.progression.length():
+                i = 0
+
             pygame.event.pump()
 
             for event in pygame.event.get():
@@ -60,24 +69,62 @@ class Window:
                 pygame.quit()
 
             if (keys[K_SPACE]):
-                self.paused = not self.paused
-                print("Paused = {}".format(self.paused))
-                # "Paused" reverts to false immediately, so the music does not stop.
-            if self.paused == False:
-                play_chord(self.progression.chord_list[loc][0],self.progression.chord_list[loc][1])
-                message1 = self.progression.chord2str(self.progression.chord_list[loc])
+                if space_pressed == False:
+                    space_pressed = True
+                    self.paused = not self.paused
+                    if self.paused:
+                        print("Paused")
+                    else:
+                        print("Unpaused")
+            else:
+                space_pressed = False
+
+
+            if (keys[K_r]):
+                if r_pressed == False:
+                    r_pressed = True
+                    i = 0
+            else:
+                r_pressed = False
+
+            if (keys[K_f]):
+                if f_pressed == False:
+                    f_pressed = True
+                    bpm += 10
+                    print("BPM = {}".format(bpm))
+            else:
+                f_pressed = False
+
+
+            if (keys[K_s]):
+                if s_pressed == False:
+                    s_pressed = True
+                    bpm -= 10
+                    print("BPM = {}".format(bpm))
+            else:
+                s_pressed = False
+
+            elapsed = abs(time.time()-last_time-(4*60/bpm))
+
+            if ((self.paused == False) and (elapsed<0.1)): # 4 is a hardcoded number of beats
+                play_chord(self.progression.chord_list[i][0],self.progression.chord_list[i][1], bpm=bpm)
+
+                message1 = self.progression.chord2str(self.progression.chord_list[i])
                 font = pygame.font.Font(None, 100)
                 text1 = font.render(message1, 1, (10,10,10))
 
-                message2 = get_important_notes(self.progression.chord_list[loc])
+                message2 = get_important_notes(self.progression.chord_list[i])
                 text2 = font.render(message2, 1, (10,10,10))
 
                 self.display_surf.fill ((250,250,250))
                 self.display_surf.blit(text1, (self.window_width/2-text1.get_height()/2,self.window_height/3-text1.get_width()/2))
                 self.display_surf.blit(text2, (self.window_width/2-text2.get_height()/2,self.window_height*2/3-text2.get_width()/2))
 
-                print(self.progression.chord2str(self.progression.chord_list[loc]))
-                print(get_important_notes(self.progression.chord_list[loc]))
+                print(self.progression.chord2str(self.progression.chord_list[i]))
+                print(get_important_notes(self.progression.chord_list[i]))
+                last_time = time.time()
+                i += 1
+
 
             pygame.display.flip()
 
@@ -118,6 +165,12 @@ class ChordProgression:
             print(self.chord2str(i))
             print(important_notes(i))
 
+    def length(self):
+        """
+        A wrapper to more easily get the number of chords.
+        """
+        return len(self.chord_list)
+
 
 def play_note(note, beats=1, bpm=60, amp=1):
     """Plays a note given a pitch as a position on the piano"""
@@ -135,7 +188,7 @@ def play_chord(root, tonality, beats=4, bpm=120, amp=1):
     assert os.path.exists(chords[tonality])
 
     sample(os.path.realpath(chords[tonality]), rate=rate, amp=amp)
-    sleep(beats * 120 / bpm)
+    sleep(beats * 60 / bpm)
 
 def stop():
     """Stop all tracks."""
