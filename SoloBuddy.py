@@ -71,14 +71,14 @@ class Window:
             if (keys[K_SPACE]):
                 if space_pressed == False:
                     space_pressed = True
-                    self.paused = not self.paused
                     if self.paused:
-                        print("Paused")
-                    else:
                         print("Unpaused")
+                        self.paused = False
+                    else:
+                        print("Paused")
+                        self.paused = True
             else:
                 space_pressed = False
-
 
             if (keys[K_r]):
                 if r_pressed == False:
@@ -95,7 +95,6 @@ class Window:
             else:
                 f_pressed = False
 
-
             if (keys[K_s]):
                 if s_pressed == False:
                     s_pressed = True
@@ -104,7 +103,7 @@ class Window:
             else:
                 s_pressed = False
 
-            elapsed = abs(time.time()-last_time-(4*60/bpm))
+            elapsed = abs(time.time() - last_time - (4*60/bpm))
 
             if ((self.paused == False) and (elapsed<0.1)): # 4 is a hardcoded number of beats
                 play_chord(self.progression.chord_list[i][0],self.progression.chord_list[i][1], bpm=bpm)
@@ -182,13 +181,12 @@ def play_note(note, beats=1, bpm=60, amp=1):
     sleep(beats * 60 / bpm)
 
 def play_chord(root, tonality, beats=4, bpm=120, amp=1):
-    """Plays a chord defined by the Chord class"""
+    """Plays a chord defined by root note and tonality (i.e. major, minor)"""
     half_steps = note2steps(root) - 60
     rate = (2 ** (1/12)) ** half_steps
     assert os.path.exists(chords[tonality])
 
     sample(os.path.realpath(chords[tonality]), rate=rate, amp=amp)
-    sleep(beats * 60 / bpm)
 
 def stop():
     """Stop all tracks."""
