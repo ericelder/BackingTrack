@@ -4,6 +4,7 @@ import atexit
 import os
 import pygame
 import time
+import math
 from random import choice
 from pygame.locals import *
 from psonic import *
@@ -29,9 +30,40 @@ class Window:
         self.running = True
         self.display_surf = None
         self.image_surf = None
-        self.window_width = 900
+        self.window_width = 1200
         self.window_height = 900
         self.progression = prog
+
+    def draw_measures(self, hashes, measures):
+        """
+        This draws the measures with a certain number of hashes.
+        """
+        num_lines = math.ceil(measures/8)
+        bar_height = self.window_height/2/num_lines
+        for i in range(num_lines):
+            if i+1 == num_lines and measures%8 != 0:
+                meas = measures%8
+            else:
+                meas = 8
+            y = self.window_height/4 + bar_height*(i + 0.5)
+            pygame.draw.line(self.display_surf, (100,100,255), (0,y),(self.window_width,y),10)
+            pygame.draw.line(self.display_surf, (0,0,0), (20,y-bar_height/3),(20,y+bar_height/3),5)
+            for j in range(meas):
+                meas_length = (self.window_width-40)/meas
+                x = 20 + meas_length*(j+1)
+                pygame.draw.line(self.display_surf, (0,0,0), (x,y-bar_height/4),(x,y+bar_height/5),5)
+
+                chord_idx = i*8+j
+                chord_message = "{} {}".format(self.progression.chord_list[chord_idx][0],self.progression.chord_list[chord_idx][1])
+                chord_text = pygame.font.Font(None, 25).render(chord_message, 1, (0,0,0))
+                self.display_surf.blit(chord_text, (x-meas_length/2-chord_text.get_width()/2,y-bar_height/3))
+
+                for k in range(hashes):
+                    hashspace = meas_length/hashes
+                    x2 = x - meas_length+ hashspace*(k + 0.5)
+                    pygame.draw.line(self.display_surf, (0,0,0), (x2+10,y-bar_height/6),(x2-10,y+bar_height/6),2)
+
+
 
     def go(self):
         """
@@ -42,10 +74,19 @@ class Window:
         self.display_surf = pygame.display.set_mode((self.window_width,self.window_height), pygame.HWSURFACE)
         self.running = True
         self.paused = False
-        # loc is permanantly set to zero, so it only plays one chord but is easier to test pause functionality.
-        loc = 0
+        i = 0
+        bpm = 120
+        last_time = time.time()
 
+        space_pressed = False
+        r_pressed = False
+        f_pressed = False
+        s_pressed = False
+        print(self.progression.chord_list)
         while self.running:
+            if i >= self.progression.length():
+                i = 0
+
             pygame.event.pump()
 
             for event in pygame.event.get():
@@ -60,24 +101,68 @@ class Window:
                 pygame.quit()
 
             if (keys[K_SPACE]):
-                self.paused = not self.paused
-                print("Paused = {}".format(self.paused))
-                # "Paused" reverts to false immediately, so the music does not stop.
-            if self.paused == False:
-                play_chord(self.progression.chord_list[loc][0],self.progression.chord_list[loc][1])
-                message1 = self.progression.chord2str(self.progression.chord_list[loc])
+                if space_pressed == False:
+                    space_pressed = True
+                    if self.paused:
+                        print("Unpaused")
+                        self.paused = False
+                    else:
+                        print("Paused")
+                        self.paused = True
+            else:
+                space_pressed = False
+
+            if (keys[K_r]):
+                if r_pressed == False:
+                    r_pressed = True
+                    i = 0
+            else:
+                r_pressed = False
+
+            if (keys[K_f]):
+                if f_pressed == False:
+                    f_pressed = True
+                    bpm += 10
+                    print("BPM = {}".format(bpm))
+            else:
+                f_pressed = False
+
+            if (keys[K_s]):
+                if s_pressed == False:
+                    s_pressed = True
+                    bpm -= 10
+                    print("BPM = {}".format(bpm))
+            else:
+                s_pressed = False
+
+            elapsed = abs(time.time() - last_time - (4*60/bpm))
+
+            if ((self.paused == False) and (elapsed<0.1)): # 4 is a hardcoded number of beats
+                play_chord(self.progression.chord_list[i][0],self.progression.chord_list[i][1], bpm=bpm)
+
+                message1 = self.progression.chord2str(self.progression.chord_list[i])
                 font = pygame.font.Font(None, 100)
-                text1 = font.render(message1, 1, (10,10,10))
+                text1 = font.render(message1, 1, (0,0,0))
 
-                message2 = get_important_notes(self.progression.chord_list[loc])
-                text2 = font.render(message2, 1, (10,10,10))
+                message2 = get_important_notes(self.progression.chord_list[i])
+                text2 = font.render(message2, 1, (0,0,0))
 
-                self.display_surf.fill ((250,250,250))
-                self.display_surf.blit(text1, (self.window_width/2-text1.get_height()/2,self.window_height/3-text1.get_width()/2))
-                self.display_surf.blit(text2, (self.window_width/2-text2.get_height()/2,self.window_height*2/3-text2.get_width()/2))
+                self.display_surf.fill ((250,250,255))
+                self.display_surf.blit(text1, (self.window_width/6-text1.get_width()/2,self.window_height*7/8-text1.get_height()/2))
+                self.display_surf.blit(text2, (self.window_width*3/4-text2.get_width()/2,self.window_height*7/8-text2.get_height()/2))
+                pygame.draw.line(self.display_surf, (0,0,0), (0,self.window_height*3/4),(self.window_width,self.window_height*3/4),5)
+                pygame.draw.line(self.display_surf, (0,0,0), (0,self.window_height/4),(self.window_width,self.window_height/4),5)
 
-                print(self.progression.chord2str(self.progression.chord_list[loc]))
-                print(get_important_notes(self.progression.chord_list[loc]))
+                message3 = "Here we will put some buttons"
+                text3 = pygame.font.Font(None, 50).render(message3, 1, (0,0,0))
+                self.display_surf.blit(text3, (self.window_width/2-text3.get_width()/2,self.window_height/8-text3.get_height()/2))
+                self.draw_measures(4,12)
+
+                print(self.progression.chord2str(self.progression.chord_list[i]))
+                print(get_important_notes(self.progression.chord_list[i]))
+                last_time = time.time()
+                i += 1
+
 
             pygame.display.flip()
 
@@ -91,6 +176,7 @@ class ChordProgression:
         self.chord_list = []
         for i in chords:
             self.chord_list.append(i)
+        self.convert()
         # print(len(self.chord_list))
 
     def __str__(self):
@@ -118,6 +204,22 @@ class ChordProgression:
             print(self.chord2str(i))
             print(important_notes(i))
 
+    def length(self):
+        """
+        A wrapper to more easily get the number of chords.
+        """
+        return len(self.chord_list)
+
+    def convert(self):
+        """
+        This converts the progression from chord tuples of (root, tonality, duration)
+        into a more parseable format of (root, tonality) with copies for the duration.
+        """
+        new_chord_list = []
+        for i in self.chord_list:
+            for j in range(i[2]):
+                new_chord_list.append(i[0:2])
+        self.chord_list = new_chord_list
 
 def play_note(note, beats=1, bpm=60, amp=1):
     """Plays a note given a pitch as a position on the piano"""
@@ -129,13 +231,12 @@ def play_note(note, beats=1, bpm=60, amp=1):
     sleep(beats * 60 / bpm)
 
 def play_chord(root, tonality, beats=4, bpm=120, amp=1):
-    """Plays a chord defined by the Chord class"""
+    """Plays a chord defined by root note and tonality (i.e. major, minor)"""
     half_steps = note2steps(root) - 60
     rate = (2 ** (1/12)) ** half_steps
     assert os.path.exists(chords[tonality])
 
     sample(os.path.realpath(chords[tonality]), rate=rate, amp=amp)
-    sleep(beats * 120 / bpm)
 
 def stop():
     """Stop all tracks."""
@@ -211,7 +312,8 @@ make_chord_dict()
 
 # print(note2steps('Eb'))
 
-window = Window(prog = ChordProgression(("C","major7"),("F","minor"),("G","major"),("D","minor7")))
+# window = Window(prog = ChordProgression(("C","major7"),("F","minor"),("G","major"),("D","minor7")))
+window = Window(prog = ChordProgression(("F","major", 3),("F","major7", 1),("Bb","major7", 2),("F","major", 2),("C","major7",1),("Bb","major7",1),("F","major",2)))
 # practiceChordProgression = ChordProgression(("C","major7"),("F","minor"),("G","major"),("D","minor7"))
 # print(practiceChordProgression)
 # practiceChordProgression.play()
