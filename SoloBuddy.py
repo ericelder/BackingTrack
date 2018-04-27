@@ -34,61 +34,103 @@ class Window:
         self.window_height = 900
         self.progression = prog
 
-    def draw_measures(self, hashes, measures):
+    def draw_imp_notes(self, i):
         """
-        This draws the measures with a certain number of hashes.
+        Draws the current chord name and important notes in the bottom section of the screen.
         """
+        #Display the name of the chord
+        message1 = self.progression.chord2str(self.progression.chord_list[i])
+        text1 = pygame.font.Font(None, 100).render(message1, 1, (0,0,0))
+        self.display_surf.blit(text1, (self.window_width/6-text1.get_width()/2,self.window_height*7/8-text1.get_height()/2))
+
+        # Display the most important notes
+        message2 = get_important_notes(self.progression.chord_list[i])
+        text2 = pygame.font.Font(None, 100).render(message2, 1, (0,0,0))
+        self.display_surf.blit(text2, (self.window_width*3/4-text2.get_width()/2,self.window_height*7/8-text2.get_height()/2))
+
+    def draw_measures(self, ind):
+        """
+        This draws the measures, hashes, and chord names in the middle section of the screen.
+        It will separate the screen into measures, up to 8 per line, with hashes based on the
+        time signature. It puts each chord name above the measure and highlights the current one.
+        """
+        measures = self.progression.length()
+        hashes = self.time_signature
         num_lines = math.ceil(measures/8)
         bar_height = self.window_height/2/num_lines
-        for i in range(num_lines):
+        space_width = 5
+        for i in range(num_lines): # i is the line number
             if i+1 == num_lines and measures%8 != 0:
                 meas = measures%8
             else:
                 meas = 8
             y = self.window_height/4 + bar_height*(i + 0.5)
-            pygame.draw.line(self.display_surf, (100,100,255), (0,y),(self.window_width,y),10)
-            pygame.draw.line(self.display_surf, (0,0,0), (20,y-bar_height/3),(20,y+bar_height/3),5)
-            for j in range(meas):
+            pygame.draw.line(self.display_surf, (0,0,0), (20,y-bar_height/6),(20,y+bar_height/6),6) # at start of line
+            for j in range(meas): # j is the measure within that line
                 meas_length = (self.window_width-40)/meas
                 x = 20 + meas_length*(j+1)
-                pygame.draw.line(self.display_surf, (0,0,0), (x,y-bar_height/4),(x,y+bar_height/5),5)
+                if (i*8+j == ind):
+                    pygame.draw.line(self.display_surf, (255,255,0), (x-meas_length+3,y),(x-3,y),50) # the highlight
+                pygame.draw.line(self.display_surf, (0,0,0), (x,y-bar_height/6),(x,y+bar_height/6),6) # barlines between measures
+
 
                 chord_idx = i*8+j
-                chord_message = "{} {}".format(self.progression.chord_list[chord_idx][0],self.progression.chord_list[chord_idx][1])
-                chord_text = pygame.font.Font(None, 25).render(chord_message, 1, (0,0,0))
-                self.display_surf.blit(chord_text, (x-meas_length/2-chord_text.get_width()/2,y-bar_height/3))
+                # The root and tonality of the chord are displayed separately to faciltate click detection.
+                chord_root_message = self.progression.chord_list[chord_idx][0]
+                chord_tonality_message = self.progression.chord_list[chord_idx][1]
+                chord_root_text = pygame.font.Font(None, 30).render(chord_root_message, 1, (0,0,0))
+                chord_tonality_text = pygame.font.Font(None, 30).render(chord_tonality_message, 1, (0,0,0))
+                self.display_surf.blit(chord_root_text, (x-(meas_length+chord_root_text.get_width()+space_width+chord_tonality_text.get_width())/2, y-bar_height/5))
+                self.display_surf.blit(chord_tonality_text, (x-(meas_length-chord_root_text.get_width()-space_width+chord_tonality_text.get_width())/2, y-bar_height/5))
 
-                for k in range(hashes):
+                # self.display_surf.blit(chord_text, (x-meas_length/2-chord_text.get_width()/2,y-bar_height/5)) # Chord labels
+
+                for k in range(hashes): # k is the hash (beat) within that measure
                     hashspace = meas_length/hashes
                     x2 = x - meas_length+ hashspace*(k + 0.5)
-                    pygame.draw.line(self.display_surf, (0,0,0), (x2+10,y-bar_height/6),(x2-10,y+bar_height/6),2)
+                    pygame.draw.line(self.display_surf, (0,0,0), (x2+10,y-bar_height/12),(x2-10,y+bar_height/12),4) # the hashes
 
+    def draw_buttons(self):
+        """
+        Fills the top section of the screen with the buttons to change the settings.
+        """
+        message3 = "Here we will put some buttons"
+        text3 = pygame.font.Font(None, 50).render(message3, 1, (0,0,0))
+        self.display_surf.blit(text3, (self.window_width/2-text3.get_width()/2,self.window_height/8-text3.get_height()/2))
 
 
     def go(self):
         """
         This is the main method that gets called to start the whole thing.
+        It has a continuous loop that listens for user input via keys, and
+        also plays the chord progression. The chord progression plays based
+        on a timer, so it and the key listener do not delay each other.
         """
         pygame.init() #Gets pygame going
         # display_surf and image_surf are also from a pygame tutorial
         self.display_surf = pygame.display.set_mode((self.window_width,self.window_height), pygame.HWSURFACE)
+        # Running is if the code is running, paused measures if it is acutally playing.
         self.running = True
         self.paused = False
-        i = 0
-        bpm = 120
-        last_time = time.time()
+        i = 0 # The index of where we are in the chord progression.
+        self.bpm = 120
+        self.time_signature = 4 # We only care about the top of the time signature
+        last_time = time.time() # Start the timer.
 
+        # Flags to avoid having the same button detected twice when it is held.
         space_pressed = False
         r_pressed = False
         f_pressed = False
         s_pressed = False
-        print(self.progression.chord_list)
         while self.running:
+            # While loop instead of a for loop, because the chords run on a timer,
+            # so each chord plays through multiple cycles of the loop.
             if i >= self.progression.length():
                 i = 0
 
             pygame.event.pump()
 
+            # Detects exit button to close program.
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self.running = False
@@ -96,10 +138,12 @@ class Window:
             pygame.key.set_repeat(10000,1000)
             keys = pygame.key.get_pressed()
 
+            # Detects escape button to close program.
             if (keys[K_ESCAPE]):
                 self.running = False
                 pygame.quit()
 
+            # Space bar toggles pause and play.
             if (keys[K_SPACE]):
                 if space_pressed == False:
                     space_pressed = True
@@ -112,6 +156,7 @@ class Window:
             else:
                 space_pressed = False
 
+            # Takes i, the index of the chord progression, back to the top.
             if (keys[K_r]):
                 if r_pressed == False:
                     r_pressed = True
@@ -119,47 +164,46 @@ class Window:
             else:
                 r_pressed = False
 
+            # F and S make the music faster or slower by increments of 10 self.bpm.
             if (keys[K_f]):
                 if f_pressed == False:
                     f_pressed = True
-                    bpm += 10
-                    print("BPM = {}".format(bpm))
+                    self.bpm += 10
+                    print("self.bpm = {}".format(self.bpm))
             else:
                 f_pressed = False
 
             if (keys[K_s]):
                 if s_pressed == False:
                     s_pressed = True
-                    bpm -= 10
-                    print("BPM = {}".format(bpm))
+                    self.bpm -= 10
+                    print("self.bpm = {}".format(self.bpm))
             else:
                 s_pressed = False
 
-            elapsed = abs(time.time() - last_time - (4*60/bpm))
+            # This doesn't actually measure elapsed time, but instead measures
+            # how close the elapsed time is to 1 measure.
+            elapsed = abs(time.time() - last_time - (self.time_signature*60/self.bpm))
 
-            if ((self.paused == False) and (elapsed<0.1)): # 4 is a hardcoded number of beats
-                play_chord(self.progression.chord_list[i][0],self.progression.chord_list[i][1], bpm=bpm)
+            if ((self.paused == False) and (elapsed<0.1)):
+                #If close to one measure has passed, play the next chord.
+                play_chord(self.progression.chord_list[i][0],self.progression.chord_list[i][1], bpm=self.bpm)
 
-                message1 = self.progression.chord2str(self.progression.chord_list[i])
-                font = pygame.font.Font(None, 100)
-                text1 = font.render(message1, 1, (0,0,0))
-
-                message2 = get_important_notes(self.progression.chord_list[i])
-                text2 = font.render(message2, 1, (0,0,0))
-
+                # Display boundaries between the sections of the screen
                 self.display_surf.fill ((250,250,255))
-                self.display_surf.blit(text1, (self.window_width/6-text1.get_width()/2,self.window_height*7/8-text1.get_height()/2))
-                self.display_surf.blit(text2, (self.window_width*3/4-text2.get_width()/2,self.window_height*7/8-text2.get_height()/2))
                 pygame.draw.line(self.display_surf, (0,0,0), (0,self.window_height*3/4),(self.window_width,self.window_height*3/4),5)
                 pygame.draw.line(self.display_surf, (0,0,0), (0,self.window_height/4),(self.window_width,self.window_height/4),5)
 
-                message3 = "Here we will put some buttons"
-                text3 = pygame.font.Font(None, 50).render(message3, 1, (0,0,0))
-                self.display_surf.blit(text3, (self.window_width/2-text3.get_width()/2,self.window_height/8-text3.get_height()/2))
-                self.draw_measures(4,12)
+                # Display each section of the screen
+                self.draw_imp_notes(i) # Display bottom section of screen
+                self.draw_measures(i) # Display middle section of screen
+                self.draw_buttons() # Display top section of screen
+
 
                 print(self.progression.chord2str(self.progression.chord_list[i]))
                 print(get_important_notes(self.progression.chord_list[i]))
+
+                # Update the clock, and move the chord index to the next chord.
                 last_time = time.time()
                 i += 1
 
@@ -245,12 +289,6 @@ def stop():
     msg = msg.build()
     synth_server.client.send(msg)
 
-def read_midi(filename):
-    """
-    We probably don't need this anymore.
-    """
-    pass
-
 def make_chord_dict():
     """
     Creates a dictionary of .wav files print(chords)for each tonality of chord.
@@ -275,7 +313,7 @@ def note2steps(pitch):
 
 def step2notes(notes):
     """
-    Takes an int that sonc pi can play and converts it to the corresponding note string.
+    Takes an int that sonic pi can play and converts it to the corresponding note string.
     """
     all_notes = ["C","C#/Db","D","D#/Eb","E","F","F#/Gb","G","G#/Ab","A","A#/Bb","B"]
     pitches = []
