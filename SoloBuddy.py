@@ -35,120 +35,120 @@ menu_data = (
         'Ab',
         'major',
         'minor',
-        'major 7',
-        'minor 7',
+        'major7',
+        'minor7',
     ),
     (
         'A',
         'major',
         'minor',
-        'major 7',
-        'minor 7',
+        'major7',
+        'minor7',
     ),
     (
         'A#',
         'major',
         'minor',
-        'major 7',
-        'minor 7',
+        'major7',
+        'minor7',
     ),
     (
         'Bb',
         'major',
         'minor',
-        'major 7',
-        'minor 7',
+        'major7',
+        'minor7',
     ),
     (
         'B',
         'major',
         'minor',
-        'major 7',
-        'minor 7',
+        'major7',
+        'minor7',
     ),
     (
         'C',
         'major',
         'minor',
-        'major 7',
-        'minor 7',
+        'major7',
+        'minor7',
     ),
     (
         'C#',
         'major',
         'minor',
-        'major 7',
-        'minor 7',
+        'major7',
+        'minor7',
     ),
     (
         'Db',
         'major',
         'minor',
-        'major 7',
-        'minor 7',
+        'major7',
+        'minor7',
     ),
     (
         'D',
         'major',
         'minor',
-        'major 7',
-        'minor 7',
+        'major7',
+        'minor7',
     ),
     (
         'D#',
         'major',
         'minor',
-        'major 7',
-        'minor 7',
+        'major7',
+        'minor7',
     ),
     (
         'Eb',
         'major',
         'minor',
-        'major 7',
-        'minor 7',
+        'major7',
+        'minor7',
     ),
     (
         'E',
         'major',
         'minor',
-        'major 7',
-        'minor 7',
+        'major7',
+        'minor7',
     ),
     (
         'F',
         'major',
         'minor',
-        'major 7',
-        'minor 7',
+        'major7',
+        'minor7',
     ),
     (
         'F#',
         'major',
         'minor',
-        'major 7',
-        'minor 7',
+        'major7',
+        'minor7',
     ),
     (
         'Gb',
         'major',
         'minor',
-        'major 7',
-        'minor 7',
+        'major7',
+        'minor7',
     ),
     (
         'G',
         'major',
         'minor',
-        'major 7',
-        'minor 7',
+        'major7',
+        'minor7',
     ),
     (
         'G#',
         'major',
         'minor',
-        'major 7',
-        'minor 7',
+        'major7',
+        'minor7',
     ),
     'Quit',
 )
@@ -173,15 +173,32 @@ class Window:
         """
         Draws the current chord name and important notes in the bottom section of the screen.
         """
-        #Display the name of the chord
+
+        # For the current chord
+        # Display the name of the chord
         message1 = self.progression.chord2str(self.progression.chord_list[i])
         text1 = pygame.font.Font(None, 100).render(message1, 1, (0,0,0))
-        self.display_surf.blit(text1, (self.window_width/6-text1.get_width()/2,self.window_height*7/8-text1.get_height()/2))
+        self.display_surf.blit(text1, (self.window_width/6-text1.get_width()/2,self.window_height*13/16-text1.get_height()/2))
 
         # Display the most important notes
         message2 = get_important_notes(self.progression.chord_list[i])
         text2 = pygame.font.Font(None, 100).render(message2, 1, (0,0,0))
-        self.display_surf.blit(text2, (self.window_width*3/4-text2.get_width()/2,self.window_height*7/8-text2.get_height()/2))
+        self.display_surf.blit(text2, (self.window_width*3/4-text2.get_width()/2,self.window_height*13/16-text2.get_height()/2))
+
+        # For the next chord
+        if i+1 == self.progression.length():
+            i = 0 # So that it loops back around
+        else:
+            i += 1
+
+        message3 = self.progression.chord2str(self.progression.chord_list[i])
+        text3 = pygame.font.Font(None, 50).render(message3, 1, (0,0,0))
+        self.display_surf.blit(text3, (self.window_width/6-text3.get_width()/2,self.window_height*15/16-text3.get_height()/2))
+
+        # Display the most important notes
+        message4 = get_important_notes(self.progression.chord_list[i])
+        text4 = pygame.font.Font(None, 50).render(message4, 1, (0,0,0))
+        self.display_surf.blit(text4, (self.window_width*3/4-text4.get_width()/2,self.window_height*15/16-text4.get_height()/2))
 
     def draw_measures(self, ind):
         """
@@ -515,15 +532,6 @@ class ChordProgression:
         """
         return "{} {}".format(chord[0], chord[1])
 
-
-    def play(self, def_beats=4, def_bpm=120):
-        """Plays the chords in the chord progression for 4 beats each"""
-
-        for i in self.chord_list:
-            play_chord(i[0],i[1], beats=def_beats,bpm=def_bpm)
-            print(self.chord2str(i))
-            print(important_notes(i))
-
     def length(self):
         """
         A wrapper to more easily get the number of chords.
@@ -542,7 +550,11 @@ class ChordProgression:
         self.chord_list = new_chord_list
 
 def play_note(note, beats=1, bpm=60, amp=1):
-    """Plays a note given a pitch as a position on the piano"""
+    """
+    Plays a note given a pitch as a position on the piano.
+    We don't actually ever call this, but we left it here
+    because play_chord is based on it.
+    """
     half_steps = note - SAMPLE_NOTE
     rate = (2 ** (1 / 12)) ** half_steps
     assert os.path.exists(SAMPLE_NOTE_FILE)
@@ -554,16 +566,8 @@ def play_chord(root, tonality, beats=4, bpm=120, amp=1):
     """Plays a chord defined by root note and tonality (i.e. major, minor)"""
     half_steps = note2steps(root) - 60
     rate = (2 ** (1/12)) ** half_steps
-    assert os.path.exists(chords[tonality])
 
     sample(os.path.realpath(chords[tonality]), rate=rate, amp=amp)
-
-def stop():
-    """Stop all tracks."""
-    msg = osc_message_builder.OscMessageBuilder(address='/stop-all-jobs')
-    msg.add_arg('SONIC_PI_PYTHON')
-    msg = msg.build()
-    synth_server.client.send(msg)
 
 def make_chord_dict():
     """
@@ -587,30 +591,55 @@ def note2steps(pitch):
         modifier = -1
     return (white_keys[pitch[0]]+modifier)
 
-def step2notes(notes):
+def step2notes(notes, mode):
     """
     Takes an int that sonic pi can play and converts it to the corresponding note string.
     """
     all_notes = ["C","C#/Db","D","D#/Eb","E","F","F#/Gb","G","G#/Ab","A","A#/Bb","B"]
     pitches = []
     for i in notes:
-        pitches.append(all_notes[i%12])
+            pitch = all_notes[i%12]
+            # This if statement makes the notes display as "C#" or "Db" rather than "C#/Db"
+            if len(pitch) == 1: # a natural note
+                pitches.append(pitch)
+            elif mode == 'flats': # and not a natural note
+                pitches.append(pitch[3:5])
+            else: # mode == 'sharps' and not a natural note
+                pitches.append(pitch[0:2])
     return pitches
 
 def get_important_notes(chord):
     """
-    This finds the notes that will sound good over a certain chord.
+    This finds the notes that will sound good over a certain chord
+    and returns a string ready to be displayed.
     """
     root = note2steps(chord[0])
+    # This if statement determines whether the notes should be displayed as sharps or flats.
+    # If the root is sharp or flat, the mode of the notes matches.
+    # If the root is natural, the notes are sharp unless the root is F.
+    if len(chord[0]) == 2 and chord[0][1] == 'b': # If root is flat, display notes as flats
+        mode = 'flats'
+    elif chord[0] == 'F': # An exception to the naturals, because F is unusual
+        mode =='flats'
+    else: # If the chord is not flat, i.e. natural or sharp
+        mode = 'sharps'
     imp_intervals = important_notes[chord[1]]
     imp_steps = []
     for i in imp_intervals:
         imp_steps.append(i + root)
-    imp_notes = (step2notes(imp_steps))
-    note_display = ""
-    for i in imp_notes:
-        note_display += i
-        note_display += "     "
+    imp_notes = step2notes(imp_steps, mode)
+    black_display = ""
+    blue_display = ""
+    for i in range(len(imp_notes)):
+        if i == 0 or i == 2:
+            black_display += imp_notes(i)
+            black_display += "    "
+            blue_display += "       "
+        else:
+            blue_display += imp_notes(i)
+            blue_display += "     "
+            black_display += "       "
+    note_display = (black_display, blue_display)
     return note_display
 
 def handle_menu(e):
@@ -623,23 +652,11 @@ def handle_menu(e):
 
 
 
-
 atexit.register(stop)
 
 make_chord_dict()
 
-# play_note(60, 1, 60)
+# play_chord('C','major')
+window = Window(prog = ChordProgression(("C","major", 16)))
 
-#play_chord('A','minor7')
-# play 60
-
-# print(practiceChordProgression.chord2str(("D","minor")))
-
-# print(note2steps('Eb'))
-
-# window = Window(prog = ChordProgression(("C","major7"),("F","minor"),("G","major"),("D","minor7")))
-window = Window(prog = ChordProgression(("C","major", 12)))
-# practiceChordProgression = ChordProgression(("C","major7"),("F","minor"),("G","major"),("D","minor7"))
-# print(practiceChordProgression)
-# practiceChordProgression.play()
 window.go()
