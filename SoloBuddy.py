@@ -11,9 +11,10 @@ from random import choice
 from pygame.locals import *
 from psonic import *
 from MenuBackStuff import PopupMenu
+from multiprocessing import Process
 
 # The sample directory is relative to this source file's directory.
-SAMPLES_DIR = os.path.join(os.path.dirname(__file__), "C3_chords")
+SAMPLES_DIR = os.path.join(os.path.dirname(__file__), "chords")
 
 SAMPLE_NOTE_FILE = os.path.join(SAMPLES_DIR, "bass_D2.wav")
 SAMPLE_NOTE = D2  # the sample file plays at this pitch
@@ -165,6 +166,8 @@ class Window:
         self.window_height = 900
         self.progression = prog
 
+        self.thread = None
+
         # size of the cells in the button panel
         self.cell_width = self.window_width/5
         self.cell_height = self.window_height/12
@@ -181,9 +184,13 @@ class Window:
         self.display_surf.blit(text1, (self.window_width/6-text1.get_width()/2,self.window_height*13/16-text1.get_height()/2))
 
         # Display the most important notes
-        message2 = get_important_notes(self.progression.chord_list[i])
+        message2 = get_important_notes(self.progression.chord_list[i])[0]
         text2 = pygame.font.Font(None, 100).render(message2, 1, (0,0,0))
         self.display_surf.blit(text2, (self.window_width*3/4-text2.get_width()/2,self.window_height*13/16-text2.get_height()/2))
+
+        message5 = get_important_notes(self.progression.chord_list[i])[1]
+        text5 = pygame.font.Font(None, 100).render(message5, 1, (0,0,255))
+        self.display_surf.blit(text5, (self.window_width*3/4-text5.get_width()/2,self.window_height*13/16-text5.get_height()/2))
 
         # For the next chord
         if i+1 == self.progression.length():
@@ -196,9 +203,13 @@ class Window:
         self.display_surf.blit(text3, (self.window_width/6-text3.get_width()/2,self.window_height*15/16-text3.get_height()/2))
 
         # Display the most important notes
-        message4 = get_important_notes(self.progression.chord_list[i])
+        message4 = get_important_notes(self.progression.chord_list[i])[0]
         text4 = pygame.font.Font(None, 50).render(message4, 1, (0,0,0))
         self.display_surf.blit(text4, (self.window_width*3/4-text4.get_width()/2,self.window_height*15/16-text4.get_height()/2))
+
+        message6 = get_important_notes(self.progression.chord_list[i])[1]
+        text6 = pygame.font.Font(None, 50).render(message6, 1, (0,0,255))
+        self.display_surf.blit(text6, (self.window_width*3/4-text6.get_width()/2,self.window_height*15/16-text6.get_height()/2))
 
     def draw_measures(self, ind):
         """
@@ -276,6 +287,7 @@ class Window:
         bpm_text = pygame.font.Font(None, 50).render(bpm_message, 1, (0,0,0))
         self.display_surf.blit(bpm_text, (self.cell_width*1-bpm_text.get_width()/2,self.cell_height*0.5-bpm_text.get_height()/2))
 
+
         add_message = "ADD MEAS."
         add_text = pygame.font.Font(None, 50).render(add_message, 1, (0,0,0))
         self.display_surf.blit(add_text, (self.cell_width*3.5-add_text.get_width()/2,self.cell_height*1.5-add_text.get_height()/2))
@@ -297,7 +309,9 @@ class Window:
         # Running is if the code is running, paused measures if it is acutally playing.
         self.running = True
         self.paused = False
-        i = 0 # The index of where we are in the chord progression.
+        i = -1 # The index of where we are in the chord progression.
+        # i starts at -1, i.e. the last index, so that when the program
+        # starts it immidiately loops back around.
         self.bpm = 120
         self.time_signature = 4 # We only care about the top of the time signature
         last_time = time.time() # Start the timer.
@@ -317,10 +331,6 @@ class Window:
         while self.running:
             # While loop instead of a for loop, because the chords run on a timer,
             # so each chord plays through multiple cycles of the loop.
-            if i >= self.progression.length():
-                i = 0 # Loop back to the top of the progression
-            elif i < 0:
-                i = 0
 
             pygame.event.pump()
 
@@ -328,6 +338,9 @@ class Window:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self.running = False
+                    if self.thread != None and self.thread.is_alive():
+                        self.thread.terminate()
+                        self.thread = None
                     pygame.quit()
                 elif event.type == MOUSEBUTTONUP:
                     chosen_chord = 0
@@ -341,7 +354,7 @@ class Window:
                             self.paused = True
                     elif (self.cell_width*2 < pygame.mouse.get_pos()[0] < self.cell_width*3 and self.cell_height*2 < pygame.mouse.get_pos()[1] < self.cell_height*3):
                         i = 0
-                        elapsed = 0
+                        flag = True
                     elif (self.cell_width*0 < pygame.mouse.get_pos()[0] < self.cell_width*1 and self.cell_height*1 < pygame.mouse.get_pos()[1] < self.cell_height*2):
                         self.bpm -= 10
                         print("bpm = {}".format(self.bpm))
@@ -397,6 +410,9 @@ class Window:
             # Detects escape button to close program.
             if (keys[K_ESCAPE]):
                 self.running = False
+                if self.thread != None and self.thread.is_alive():
+                    self.thread.terminate()
+                    self.thread = None
                 pygame.quit()
 
             # Space bar toggles pause and play.
@@ -455,48 +471,48 @@ class Window:
             else:
                 s_pressed = False
 
-            # This doesn't actually measure elapsed time, but instead measures
-            # how close the elapsed time is to 1 measure.
-            elapsed = abs(time.time() - last_time - (self.time_signature*60/self.bpm))
-
             if (keys[K_LEFT]):
                 if back_pressed == False:
                     back_pressed = True
-                    i -= 2
-                    elapsed = 0
+                    i -= 1
+                    flag = True
             else:
                 back_pressed = False
 
-            if (keys[K_RIGHT] or flag):
+            if (keys[K_RIGHT]):
                 if next_pressed == False:
                     next_pressed = True
-                    elapsed = 0
-                    flag = False
+                    if self.thread != None and self.thread.is_alive():
+                        self.thread.terminate()
+                    i += 1
             else:
                 next_pressed = False
 
-            if ((self.paused == False) and (elapsed<0.1)):
-                #If close to one measure has passed, play the next chord.
-                play_chord(self.progression.chord_list[i][0],self.progression.chord_list[i][1], beats = self.time_signature, bpm=self.bpm)
+            if (flag):
+                if self.thread != None and self.thread.is_alive():
+                    self.thread.terminate()
+                flag = False
 
-                # Display boundaries between the sections of the screen
-                self.display_surf.fill ((250,250,255))
-                pygame.draw.line(self.display_surf, (0,0,0), (0,self.window_height*3/4),(self.window_width,self.window_height*3/4),5)
-                pygame.draw.line(self.display_surf, (0,0,0), (0,self.window_height/4),(self.window_width,self.window_height/4),5)
-
-                # Display each section of the screen
-                self.draw_imp_notes(i) # Display bottom section of screen
-                self.draw_measures(i) # Display middle section of screen
-                self.draw_buttons() # Display top section of screen
-
-
-                print(self.progression.chord2str(self.progression.chord_list[i]))
-                print(get_important_notes(self.progression.chord_list[i]))
-
-                # Update the clock, and move the chord index to the next chord.
-                last_time = time.time()
+            if (self.paused == False) and (self.thread == None or not self.thread.is_alive()):
                 i += 1
+                if i >= self.progression.length():
+                    i = 0 # Loop back to the top of the progression
+                elif i < 0:
+                    i = 0
 
+                #If close to one measure has passed, play the next chord.
+                self.thread = Process(target=play_chord, args = (self.progression.chord_list[i][0],self.progression.chord_list[i][1], self.time_signature, self.bpm))
+                self.thread.start()
+
+            # Display boundaries between the sections of the screen
+            self.display_surf.fill ((250,250,255))
+            pygame.draw.line(self.display_surf, (0,0,0), (0,self.window_height*3/4),(self.window_width,self.window_height*3/4),5)
+            pygame.draw.line(self.display_surf, (0,0,0), (0,self.window_height/4),(self.window_width,self.window_height/4),5)
+
+            # Display each section of the screen
+            self.draw_imp_notes(i) # Display bottom section of screen
+            self.draw_measures(i) # Display middle section of screen
+            self.draw_buttons() # Display top section of screen
 
             pygame.display.flip()
 
@@ -562,12 +578,13 @@ def play_note(note, beats=1, bpm=60, amp=1):
     sample(os.path.realpath(SAMPLE_NOTE_FILE), rate=rate, amp=amp)
     sleep(beats * 60 / bpm)
 
-def play_chord(root, tonality, beats=4, bpm=120, amp=1):
+def play_chord(root, tonality, beats=4, bpm=120):
     """Plays a chord defined by root note and tonality (i.e. major, minor)"""
+    amp = 1 # Sonic Pi needs this
     half_steps = note2steps(root) - 60
     rate = (2 ** (1/12)) ** half_steps
-
     sample(os.path.realpath(chords[tonality]), rate=rate, amp=amp)
+    sleep(beats*60/bpm)
 
 def make_chord_dict():
     """
@@ -620,7 +637,7 @@ def get_important_notes(chord):
     if len(chord[0]) == 2 and chord[0][1] == 'b': # If root is flat, display notes as flats
         mode = 'flats'
     elif chord[0] == 'F': # An exception to the naturals, because F is unusual
-        mode =='flats'
+        mode = 'flats'
     else: # If the chord is not flat, i.e. natural or sharp
         mode = 'sharps'
     imp_intervals = important_notes[chord[1]]
@@ -628,17 +645,21 @@ def get_important_notes(chord):
     for i in imp_intervals:
         imp_steps.append(i + root)
     imp_notes = step2notes(imp_steps, mode)
+
+    # Color codes the notes as either black (safe) or blue (tonal)
+    # The first and fifth are considered safe. This works for almost
+    # all chords, but might need to be more specific if we add fancier chords.
     black_display = ""
     blue_display = ""
     for i in range(len(imp_notes)):
         if i == 0 or i == 2:
-            black_display += imp_notes(i)
+            black_display += imp_notes[i]
             black_display += "    "
-            blue_display += "       "
+            blue_display += "         "
         else:
-            blue_display += imp_notes(i)
+            blue_display += imp_notes[i]
             blue_display += "     "
-            black_display += "       "
+            black_display += "         "
     note_display = (black_display, blue_display)
     return note_display
 
@@ -651,12 +672,9 @@ def handle_menu(e):
         return (e.name[0:-3],e.text)
 
 
-
-atexit.register(stop)
-
-make_chord_dict()
-
-# play_chord('C','major')
-window = Window(prog = ChordProgression(("C","major", 16)))
-
-window.go()
+if __name__ == "__main__":
+    make_chord_dict()
+    # play_note(60)
+    # play_chord('C','major')
+    window = Window(prog = ChordProgression(("C","major", 16)))
+    window.go()
