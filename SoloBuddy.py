@@ -640,21 +640,21 @@ class Window:
                     chosen_chord = 0
                     if (self.cell_width*2 < pygame.mouse.get_pos()[0] < self.cell_width*3 and self.cell_height*1 < pygame.mouse.get_pos()[1] < self.cell_height*2):
                         if self.paused:
-                            print("Unpaused")
+                            #print("Unpaused")
                             self.paused = False
                             flag = True
                         else:
-                            print("Paused")
+                            #print("Paused")
                             self.paused = True
                     elif (self.cell_width*2 < pygame.mouse.get_pos()[0] < self.cell_width*3 and self.cell_height*2 < pygame.mouse.get_pos()[1] < self.cell_height*3):
                         i = 0
                         flag = True
                     elif (self.cell_width*0 < pygame.mouse.get_pos()[0] < self.cell_width*1 and self.cell_height*1 < pygame.mouse.get_pos()[1] < self.cell_height*2):
                         self.bpm -= 10
-                        print("bpm = {}".format(self.bpm))
+                        #print("bpm = {}".format(self.bpm))
                     elif (self.cell_width*1 < pygame.mouse.get_pos()[0] < self.cell_width*2 and self.cell_height*1 < pygame.mouse.get_pos()[1] < self.cell_height*2):
                         self.bpm += 10
-                        print("bpm = {}".format(self.bpm))
+                        #print("bpm = {}".format(self.bpm))
                     elif (self.cell_width*3 < pygame.mouse.get_pos()[0] < self.cell_width*4 and self.cell_height*2 < pygame.mouse.get_pos()[1] < self.cell_height*3):
                         flag = True
                     elif (self.cell_width*1 < pygame.mouse.get_pos()[0] < self.cell_width*2 and self.cell_height*2 < pygame.mouse.get_pos()[1] < self.cell_height*3):
@@ -717,11 +717,11 @@ class Window:
                 if space_pressed == False:
                     space_pressed = True
                     if self.paused:
-                        print("Unpaused")
+                        #print("Unpaused")
                         self.paused = False
                         flag = True
                     else:
-                        print("Paused")
+                        #print("Paused")
                         self.paused = True
             else:
                 space_pressed = False
@@ -756,7 +756,7 @@ class Window:
                 if f_pressed == False:
                     f_pressed = True
                     self.bpm += 10
-                    print("bpm = {}".format(self.bpm))
+                    #print("bpm = {}".format(self.bpm))
             else:
                 f_pressed = False
 
@@ -764,7 +764,7 @@ class Window:
                 if s_pressed == False:
                     s_pressed = True
                     self.bpm -= 10
-                    print("bpm = {}".format(self.bpm))
+                    #print("bpm = {}".format(self.bpm))
             else:
                 s_pressed = False
 
@@ -804,19 +804,8 @@ class Window:
                 self.thread.start()
 
             if (self.paused == False) and (self.thread2 == None or not self.thread2.is_alive()):
-                i += 1
-                if i >= self.progression.length():
-                    i = 0 # Loop back to the top of the progression
-                elif i < 0:
-                    i = 0
                 #If close to one measure has passed, play the next chord.
-                self.thread2 = Process(target=play_chord, args = (G, major, beats = 1, Progression = True))
-                self.thread2.start()
-                self.thread2 = Process(target=play_chord, args = (C, major, beats = 1, Progression = True))
-                self.thread2.start()
-                self.thread2 = Process(target=play_chord, args = (C, major, beats = 1, Progression = True))
-                self.thread2.start()
-                self.thread2 = Process(target=play_chord, args = (C, major, beats = 1, Progression = True))
+                self.thread2 = Process(target=play_chord, args = ('G', 'cluck', 1, self.bpm))
                 self.thread2.start()
 
             # Display boundaries between the sections of the screen
@@ -845,7 +834,7 @@ class ChordProgression:
         self.chord_pos = []
         for i in range(self.length()):
             self.chord_pos += (0, 0, 0, 0)
-        # print(len(self.chord_list))
+        # #print(len(self.chord_list))
 
     def __str__(self):
         """
@@ -855,7 +844,7 @@ class ChordProgression:
         for i in self.chord_list:
             self.printout += self.chord2str(i)
             self.printout += "     "
-        print(self.printout)
+        #print(self.#printout)
 
     def chord2str(self, chord):
         """
@@ -880,22 +869,19 @@ class ChordProgression:
                 new_chord_list.append(i[0:2])
         self.chord_list = new_chord_list
 
-def play_chord(root, tonality, beats=4, bpm=120, progression = False):
+def play_chord(root, tonality, beats=4, bpm=120):
     """Plays a chord defined by root note and tonality (i.e. major, minor)"""
     amp = 1 # Sonic Pi needs this
     half_steps = note2steps(root) - 60
     rate = (2 ** (1/12)) ** half_steps
-    if progression:
-        sample(os.path.realpath(chords[tonality]), rate=rate, amp=amp)
-    else:
-        sample(os.path.realpath(clickfile), rate=rate, amp=amp)
+    sample(os.path.realpath(chords[tonality]), rate=rate, amp=amp)
     sleep(beats*60/bpm)
 
 def make_chord_dict():
     """
     Creates a dictionary of .wav files print(chords)for each tonality of chord.
     """
-    chord_types = ['major','6','7','major7','9','6_9','sus','sus2','sus7','minor','minor6','minor7','minor9','minor6_9','minormaj7','dim','dim7','dimb7','aug','aug7','aug#9',]
+    chord_types = ['major','6','7','major7','9','6_9','sus','sus2','sus7','minor','minor6','minor7','minor9','minor6_9','minormaj7','dim','dim7','dimb7','aug','aug7','aug#9','cluck']
     SAMPLES_DIR = os.path.join(os.path.dirname(__file__), "chords")
     for i in chord_types:
         chords[i] = os.path.join(SAMPLES_DIR, "{}.wav".format(i))
@@ -969,7 +955,7 @@ def get_important_notes(chord):
     return note_display
 
 def handle_menu(e):
-    print('Menu event: %s.%d: %s' % (e.name,e.item_id,e.text))
+    #print('Menu event: %s.%d: %s' % (e.name,e.item_id,e.text))
     if e.name == 'Roots':
         if e.text == 'Quit':
             quit()
