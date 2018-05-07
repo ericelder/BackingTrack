@@ -1,4 +1,4 @@
-"""Synthesizes a blues solo algorithmically."""
+"""Creates a Backing track and adisplay companion for soloists."""
 
 import atexit
 import os
@@ -457,6 +457,7 @@ class Window:
         self.progression = prog
 
         self.thread = None
+        self.thread2 = None
 
         # size of the cells in the button panel
         self.cell_width = self.window_width/5
@@ -631,6 +632,9 @@ class Window:
                     if self.thread != None and self.thread.is_alive():
                         self.thread.terminate()
                         self.thread = None
+                    if self.thread2 != None and self.thread2.is_alive():
+                        self.thread2.terminate()
+                        self.thread2 = None
                     pygame.quit()
                 elif event.type == MOUSEBUTTONUP:
                     chosen_chord = 0
@@ -703,6 +707,9 @@ class Window:
                 if self.thread != None and self.thread.is_alive():
                     self.thread.terminate()
                     self.thread = None
+                if self.thread2 != None and self.thread2.is_alive():
+                    self.thread2.terminate()
+                    self.thread2 = None
                 pygame.quit()
 
             # Space bar toggles pause and play.
@@ -774,6 +781,8 @@ class Window:
                     next_pressed = True
                     if self.thread != None and self.thread.is_alive():
                         self.thread.terminate()
+                    if self.thread2 != None and self.thread2.is_alive():
+                        self.thread2.terminate()
                     i += 1
             else:
                 next_pressed = False
@@ -781,6 +790,8 @@ class Window:
             if (flag):
                 if self.thread != None and self.thread.is_alive():
                     self.thread.terminate()
+                if self.thread2 != None and self.thread2.is_alive():
+                    self.thread2.terminate()
                 flag = False
 
             if (self.paused == False) and (self.thread == None or not self.thread.is_alive()):
@@ -789,10 +800,24 @@ class Window:
                     i = 0 # Loop back to the top of the progression
                 elif i < 0:
                     i = 0
-
-                #If close to one measure has passed, play the next chord.
                 self.thread = Process(target=play_chord, args = (self.progression.chord_list[i][0],self.progression.chord_list[i][1], self.time_signature, self.bpm))
                 self.thread.start()
+
+            if (self.paused == False) and (self.thread2 == None or not self.thread2.is_alive()):
+                i += 1
+                if i >= self.progression.length():
+                    i = 0 # Loop back to the top of the progression
+                elif i < 0:
+                    i = 0
+                #If close to one measure has passed, play the next chord.
+                self.thread2 = Process(target=play_chord, args = (G, major, beats = 1, Progression = True))
+                self.thread2.start()
+                self.thread2 = Process(target=play_chord, args = (C, major, beats = 1, Progression = True))
+                self.thread2.start()
+                self.thread2 = Process(target=play_chord, args = (C, major, beats = 1, Progression = True))
+                self.thread2.start()
+                self.thread2 = Process(target=play_chord, args = (C, major, beats = 1, Progression = True))
+                self.thread2.start()
 
             # Display boundaries between the sections of the screen
             self.display_surf.fill ((250,250,255))
@@ -855,12 +880,15 @@ class ChordProgression:
                 new_chord_list.append(i[0:2])
         self.chord_list = new_chord_list
 
-def play_chord(root, tonality, beats=4, bpm=120):
+def play_chord(root, tonality, beats=4, bpm=120, progression = False):
     """Plays a chord defined by root note and tonality (i.e. major, minor)"""
     amp = 1 # Sonic Pi needs this
     half_steps = note2steps(root) - 60
     rate = (2 ** (1/12)) ** half_steps
-    sample(os.path.realpath(chords[tonality]), rate=rate, amp=amp)
+    if progression:
+        sample(os.path.realpath(chords[tonality]), rate=rate, amp=amp)
+    else:
+        sample(os.path.realpath(clickfile), rate=rate, amp=amp)
     sleep(beats*60/bpm)
 
 def make_chord_dict():
