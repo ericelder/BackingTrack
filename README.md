@@ -31,3 +31,6 @@ file can be run out of the terminal with:
 
 $ cd BackingTrack
 $ python SoloBuddy.py
+
+For more information on SoloBuddy visit our website:
+https://sites.google.com/view/solobuddy/home
