@@ -1,10 +1,12 @@
 # BackingTrack
 
 Authors: Eric Elder Jacobsen & Flynn Michael-Legg
+
 Last Updated: May 6th, 2018
 
 This program utilizes pygame, SonicPi v2.10, and simple-pygame-menu from Gummbum.
 For more info on the simple-pygame-menu package, see the following README link:
+
 https://github.com/zgoda-mobica/simple-pygame-menu/blob/master/README.txt
 
 SoloBuddy is designed to help musicians learn to improvise and solo by playing a
@@ -32,5 +34,6 @@ file can be run out of the terminal with:
 $ cd BackingTrack
 $ python SoloBuddy.py
 
-For more information on SoloBuddy visit our website:
+For more information on SoloBuddy (including our informational video) visit our website:
+
 https://sites.google.com/view/solobuddy/home
